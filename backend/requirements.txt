@@ -1,3 +1,4 @@
 pymongo[srv]
 fastapi[standard]
 numpy
+google-genai
