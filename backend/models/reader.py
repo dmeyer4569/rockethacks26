@@ -8,6 +8,11 @@ async def read_cases(title=None):
     cursor = db_manager.cases.find(query)
 
     cases = await cursor.to_list(length=None)
+
+    for case in cases:
+        if "_id" in case:
+            case["_id"] = str(case["_id"])
+
     return cases
 
 async def read_simulations(simulation_id=None):
