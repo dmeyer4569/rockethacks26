@@ -1,5 +1,15 @@
 import numpy as np
 
+# PROPOSAL_TEMPLATE = {
+#     "changes": "",
+#     "reasoning": "",
+#     "ratings": [],
+#     "cas": None,
+#     "mean": None,
+#     "std_dev": None,
+#     "converged": None
+# }
+
 PENALTY = 0.5
 CAS_THRESHOLD = 0.60
 VARIANCE_THRESHOLD = 0.15
