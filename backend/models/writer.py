@@ -30,6 +30,18 @@ async def insert_simulation(status, config, finished_round, final_policy, final_
     result = await db_manager.simulations.insert_one(document)
     return result.inserted_id
 
+async def update_simulation(sim_id, status, finished_round, final_policy, final_cas):
+    await db_manager.simulations.update_one(
+        {"_id": sim_id},
+        {"$set": {
+            "status": status,
+            "finished_round": finished_round,
+            "final_policy": final_policy,
+            "final_cas": final_cas,
+            "completed_at": datetime.now(timezone.utc),
+        }}
+    )
+
 # Save a round to MongoDB
 async def insert_round(
     simulation_id, round_number, base_policy, personas_used, 

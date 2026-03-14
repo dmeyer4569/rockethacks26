@@ -1,4 +1,5 @@
 import os
+import json
 from google import genai
 from google.genai import types
 
@@ -46,6 +47,24 @@ async def rate_proposal(persona: dict, current_policy: str, proposal: dict) -> s
         f'{{"score": <number between -1.00 and 1.00>, "justification": "1-2 sentence(s) explaining your rating"}}'
     )
     return await _call_gemini(system_prompt, user_prompt)
+
+
+async def apply_change(base_policy: str, change_text: str, supporting_data: dict) -> tuple[str, dict]:
+    prompt = (
+        f"A policy change is being applied. Given the base policy, the change, and the current supporting data, "
+        f"return the updated policy text AND how the supporting data would realistically change as a result.\n\n"
+        f"BASE POLICY:\n{base_policy}\n\n"
+        f"CHANGE TO APPLY:\n{change_text}\n\n"
+        f"CURRENT SUPPORTING DATA:\n{json.dumps(supporting_data)}\n\n"
+        f"Respond with ONLY this JSON:\n"
+        f'{{"updated_policy": "...", "updated_supporting_data": {{...}}}}'
+    )
+    result = await _call_gemini(
+        "You are a policy editor and economic analyst. Apply the change precisely and update the supporting data to reflect realistic downstream effects.",
+        prompt,
+    )
+    parsed = json.loads(result)
+    return parsed["updated_policy"], parsed["updated_supporting_data"]
 
 
 async def _call_gemini(system_prompt: str, user_prompt: str) -> str:
