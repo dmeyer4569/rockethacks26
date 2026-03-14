@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from models.database import db_manager
 
+# Save case to MongoDB
 async def insert_case(title, description, initial_policy, supporting_data, category):
     document = {
         "title": title,
@@ -14,7 +15,7 @@ async def insert_case(title, description, initial_policy, supporting_data, categ
     # Access the collection from the central manager
     result = await db_manager.cases.insert_one(document)
     return result.inserted_id
-
+# Save simulation_data to MongoDB
 async def insert_simulation(status, config, finished_round, final_policy, final_cas): #add a started_at data later. 
     document = {
         "status": status,
@@ -29,6 +30,7 @@ async def insert_simulation(status, config, finished_round, final_policy, final_
     result = await db_manager.simulations.insert_one(document)
     return result.inserted_id
 
+# Save a round to MongoDB
 async def insert_round(
     simulation_id, round_number, base_policy, personas_used, 
     proposals, winning_proposal_index, winning_cas
@@ -41,9 +43,21 @@ async def insert_round(
         "proposals": proposals,
         "winning_proposal_index": winning_proposal_index,
         "winning_cas": winning_cas,
-        "completed_at": datetime.now(timezone.utc)\
+        "completed_at": datetime.now(timezone.utc)
     }
 
     result = await db_manager.rounds.insert_one(document)
     return result.inserted_id
-    
+
+# Insert a Persona into MongoDB
+async def insert_persona(name, description, priorities, risk_tolerance, values):
+    document = {
+        "name": name,
+        "description": description,
+        "priorities": priorities,
+        "risk_tolerance": risk_tolerance,
+        "values": values
+    }
+
+    result = await db_manager.personas.insert_one(document)
+    return result.inserted_id

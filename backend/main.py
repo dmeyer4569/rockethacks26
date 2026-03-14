@@ -1,7 +1,10 @@
 import asyncio
 from models.database import db_manager
-from models.writer import insert_case, insert_simulation
+from models.writer import insert_case, insert_simulation, insert_round, insert_persona
+from models.reader import read_cases
+### Put fastapi stuff here, ensure use of routers to decrease random stuff in her### Put fastapi stuff here, ensure use of routers to decrease random stuff in heree
 
+### SUBJECT TO CHANGE, THIS IS FOR TESTING ONLY 
 async def main():
     # 1. Start the connection pool
     await db_manager.connect()
@@ -41,6 +44,10 @@ async def main():
         )
         print(f"Success! Simulation ID: {new_simulation}")
 
+        cases = await read_cases()
+        for case in cases:
+            print(f"Current Cases {case}")
+            print("-" * 20)
     finally:
         # 4. Clean up
         await db_manager.close()
