@@ -11,6 +11,10 @@ class MongoDBManager:
         self.client = None
         self.db = None
         self.cases = None
+        self.simulations = None
+        self.rounds = None
+        self.personas = None
+
 
     async def connect(self):
         # Update with your actual Atlas connection string
@@ -20,6 +24,10 @@ class MongoDBManager:
         
         # Define your collections here
         self.cases = self.db.get_collection("cases")
+        self.simulations = self.db.get_collection("simulations")
+        self.rounds = self.db.get_collection("rounds")
+        self.personas = self.db.get_collection("personas")
+
         print("Connected to Atlas via Native Async Driver")
 
     async def close(self):

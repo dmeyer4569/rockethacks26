@@ -1,6 +1,6 @@
 import asyncio
 from models.database import db_manager
-from models.writer import insert_case
+from models.writer import insert_case, insert_simulation
 
 async def main():
     # 1. Start the connection pool
@@ -25,6 +25,21 @@ async def main():
         )
         print(f"Success! Policy ID: {new_id}")
 
+        data2 = {
+            "num_agents": 5,
+            "lambda": 0.5,
+            "convergence_threshold": 0.60,
+            "max_rounds": 10
+        }
+
+        new_simulation = await insert_simulation(
+            "testround",
+            data2,
+            3,
+            "THROW THE TEA",
+            0.43
+        )
+        print(f"Success! Simulation ID: {new_simulation}")
 
     finally:
         # 4. Clean up
