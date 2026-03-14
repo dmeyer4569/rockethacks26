@@ -1,2 +1,3 @@
 pymongo[srv]
 fastapi[standard]
+numpy
