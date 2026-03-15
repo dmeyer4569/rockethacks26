@@ -8,8 +8,11 @@ const AGENT_COLORS = [
 ];
 
 const CHART_PADDING = { top: 20, right: 20, bottom: 32, left: 50 };
-const Y_MAX = 1.0;
-const Y_TICKS = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+const Y_TICKS = [-1.0, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1.0];
+
+function toY(value: number, plotH: number): number {
+  return CHART_PADDING.top + (plotH * (1 - value)) / 2;
+}
 
 function buildPolyline(
   dataPoints: Record<string, number>[],
@@ -22,7 +25,7 @@ function buildPolyline(
   return dataPoints
     .map((d, i) => {
       const x = CHART_PADDING.left + (dataPoints.length > 1 ? (i / (dataPoints.length - 1)) * plotW : plotW / 2);
-      const y = CHART_PADDING.top + plotH - ((d[key] ?? 0) / Y_MAX) * plotH;
+      const y = toY(d[key] ?? 0, plotH);
       return `${x},${y}`;
     })
     .join(" ");
@@ -38,7 +41,7 @@ function getDotPositions(
   const plotH = chartH - CHART_PADDING.top - CHART_PADDING.bottom;
   return dataPoints.map((d, i) => ({
     x: CHART_PADDING.left + (dataPoints.length > 1 ? (i / (dataPoints.length - 1)) * plotW : plotW / 2),
-    y: CHART_PADDING.top + plotH - ((d[key] ?? 0) / Y_MAX) * plotH,
+    y: toY(d[key] ?? 0, plotH),
     value: d[key] ?? 0,
     round: `R${i + 1}`,
   }));
@@ -91,7 +94,7 @@ export function ConvergenceChart() {
 
   const plotW = chartW - CHART_PADDING.left - CHART_PADDING.right;
   const plotH = chartH - CHART_PADDING.top - CHART_PADDING.bottom;
-  const thresholdY = CHART_PADDING.top + plotH - (threshold / Y_MAX) * plotH;
+  const thresholdY = toY(threshold, plotH);
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (data.length === 0) return;
@@ -168,7 +171,7 @@ export function ConvergenceChart() {
               style={{ overflow: "visible" }}
             >
               {Y_TICKS.map((tick) => {
-                const y = CHART_PADDING.top + plotH - (tick / Y_MAX) * plotH;
+                const y = toY(tick, plotH);
                 return (
                   <g key={`grid-${tick}`}>
                     <line x1={CHART_PADDING.left} y1={y} x2={CHART_PADDING.left + plotW} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />

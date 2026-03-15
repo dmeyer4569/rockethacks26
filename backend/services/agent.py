@@ -7,12 +7,13 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL = "gemini-2.5-flash-lite"
 
 
-def build_system_prompt(persona: dict) -> str:
+def build_system_prompt(persona: dict, domain: str = "Policy") -> str:
     prompt = (
-        f"You are a simulated economic stakeholder participating in a policy deliberation.\n\n"
+        f"You are a simulated stakeholder in a policy deliberation.\n\n"
+        f"POLICY DOMAIN: {domain}\n"
         f"IDENTITY: {persona['name']}\n"
         f"BACKGROUND: {persona['description']}\n"
-        f"ECONOMIC PRIORITIES: {', '.join(persona['priorities'])}\n"
+        f"PRIORITIES: {', '.join(persona['priorities'])}\n"
         f"RISK TOLERANCE: {persona['risk_tolerance']}\n"
         f"VALUES: {', '.join(persona['values'])}\n"
     )
@@ -43,8 +44,8 @@ def build_system_prompt(persona: dict) -> str:
     return prompt
 
 
-async def generate_proposal(persona: dict, current_policy: str, case: dict) -> str:
-    system_prompt = build_system_prompt(persona)
+async def generate_proposal(persona: dict, current_policy: str, case: dict, domain: str = "Policy") -> str:
+    system_prompt = build_system_prompt(persona, domain)
     user_prompt = (
         f"Given the following policy, suggest 1-2 specific changes (max 3 sentences) "
         f"that would make this policy more favorable for someone in your position. "
@@ -57,8 +58,8 @@ async def generate_proposal(persona: dict, current_policy: str, case: dict) -> s
     return await _call_gemini(system_prompt, user_prompt)
 
 
-async def rate_proposal(persona: dict, current_policy: str, proposal: dict) -> str:
-    system_prompt = build_system_prompt(persona)
+async def rate_proposal(persona: dict, current_policy: str, proposal: dict, domain: str = "Policy") -> str:
+    system_prompt = build_system_prompt(persona, domain)
     user_prompt = (
         f"Rate the following proposed policy change on a scale from -1.00 to 1.00 "
         f"(in 0.01 increments), where:\n"
@@ -73,7 +74,7 @@ async def rate_proposal(persona: dict, current_policy: str, proposal: dict) -> s
     return await _call_gemini(system_prompt, user_prompt)
 
 
-async def apply_change(base_policy: str, change_text: str, supporting_data: dict) -> tuple[str, dict]:
+async def apply_change(base_policy: str, change_text: str, supporting_data: dict, domain: str = "Policy") -> tuple[str, dict]:
     prompt = (
         f"A policy change is being applied. Given the base policy, the change, and the current supporting data, "
         f"return the updated policy text AND how the supporting data would realistically change as a result.\n\n"
@@ -84,7 +85,7 @@ async def apply_change(base_policy: str, change_text: str, supporting_data: dict
         f'{{"updated_policy": "...", "updated_supporting_data": {{...}}}}'
     )
     result = await _call_gemini(
-        "You are a policy editor and economic analyst. Apply the change precisely and update the supporting data to reflect realistic downstream effects.",
+        f"You are a policy editor and domain expert in {domain}. Apply the change precisely and update the supporting data to reflect realistic downstream effects in the {domain} domain.",
         prompt,
     )
     parsed = json.loads(result)
@@ -116,14 +117,23 @@ def _extract_json(text: str) -> str:
     return text[start:]
 
 
-async def _call_gemini(system_prompt: str, user_prompt: str) -> str:
-    response = await client.aio.models.generate_content(
-        model=MODEL,
-        contents=user_prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            response_mime_type="application/json",
-            temperature=0.7,
-        ),
-    )
-    return _extract_json(response.text)
+async def _call_gemini(system_prompt: str, user_prompt: str, retries: int = 3) -> str:
+    last_err = None
+    for attempt in range(retries):
+        response = await client.aio.models.generate_content(
+            model=MODEL,
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                response_mime_type="application/json",
+                temperature=0.7,
+            ),
+        )
+        result = _extract_json(response.text)
+        try:
+            json.loads(result)
+            return result
+        except json.JSONDecodeError as e:
+            last_err = e
+            print(f"  [Gemini] Invalid JSON on attempt {attempt + 1}/{retries}: {e}")
+    raise last_err

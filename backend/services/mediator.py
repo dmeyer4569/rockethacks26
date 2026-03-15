@@ -70,6 +70,7 @@ async def run_simulation(
     }
 
     current_policy = case["initial_policy"]
+    domain = case.get("category", "Policy")
     cas_history = []
     final_status = "max_rounds"
     winner = None
@@ -83,7 +84,7 @@ async def run_simulation(
 
         for round_num in range(1, max_rounds + 1):
             raw_proposals = await asyncio.gather(*[
-                generate_proposal(persona, current_policy, case)
+                generate_proposal(persona, current_policy, case, domain)
                 for persona in personas
             ])
             proposals = [json.loads(r) for r in raw_proposals]
@@ -92,7 +93,7 @@ async def run_simulation(
             for prop_idx, proposal in enumerate(proposals):
                 raters = [p for i, p in enumerate(personas) if i != prop_idx]
                 raw_ratings = await asyncio.gather(*[
-                    rate_proposal(rater, current_policy, proposal)
+                    rate_proposal(rater, current_policy, proposal, domain)
                     for rater in raters
                 ])
                 rating_dicts = [json.loads(r) for r in raw_ratings]
@@ -136,7 +137,7 @@ async def run_simulation(
             )
 
             current_policy, case["supporting_data"] = await apply_change(
-                current_policy, winner["changes"], case.get("supporting_data", {})
+                current_policy, winner["changes"], case.get("supporting_data", {}), domain
             )
 
             if convergence_mode != "fixed" and winner["converged"]:
