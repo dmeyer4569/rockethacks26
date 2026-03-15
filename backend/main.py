@@ -1,12 +1,9 @@
 import asyncio
 from contextlib import asynccontextmanager
 from models.database import db_manager
-from models.writer import insert_case, insert_persona
+from models.writer import insert_case, insert_persona, insert_simulation
 from models.reader import read_cases, read_personas
 from services.mediator import run_simulation
-from models.writer import insert_case, insert_simulation, insert_round, insert_persona
-from models.reader import *
-from models.writer import * 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import read_router
@@ -50,14 +47,23 @@ async def main():
 
         # Run simulation
         print("\nStarting simulation...")
-        result = await run_simulation(CASE_TITLE)
-
-        print(f"\n--- RESULT ---")
-        print(f"Simulation ID : {result['simulation_id']}")
-        print(f"Status        : {result['status']}")
-        print(f"Finished round: {result['finished_round']}")
-        print(f"Final CAS     : {result['final_cas']}")
-        print(f"Final policy  :\n{result['final_policy']}")
+        config = {
+            "num_agents": len(TEST_PERSONAS),
+            "lambda": 0.5,
+            "convergence_threshold": 0.60,
+            "variance-threshold": 0.15,
+            "max_rounds": 10,
+        }
+        sim_id = await insert_simulation(
+            status="running",
+            config=config,
+            finished_round=None,
+            final_policy=None,
+            final_cas=None,
+            case_title=CASE_TITLE,
+        )
+        await run_simulation(sim_id=sim_id, case_name=CASE_TITLE, num_agents=len(TEST_PERSONAS))
+        print(f"\nSimulation {sim_id} complete.")
 
     finally:
         await db_manager.close()
@@ -81,7 +87,6 @@ app.add_middleware(
 app.include_router(read_router.router)
 app.include_router(write_router.router)
 
-### Put fastapi stuff here, ensure use of routers to decrease random stuff in her### Put fastapi stuff here, ensure use of routers to decrease random stuff in heree
 @app.get("/")
 async def root():
     return {"message": "Hello"}
