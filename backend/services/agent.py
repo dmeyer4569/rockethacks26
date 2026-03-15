@@ -6,7 +6,6 @@ from google.genai import types
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL = "gemini-2.5-flash-lite"
 
-
 def build_system_prompt(persona: dict, domain: str = "Policy") -> str:
     prompt = (
         f"You are a simulated stakeholder in a policy deliberation.\n\n"
@@ -43,7 +42,6 @@ def build_system_prompt(persona: dict, domain: str = "Policy") -> str:
     prompt += "\nYou must respond ONLY from this perspective. Be specific and concise."
     return prompt
 
-
 async def generate_proposal(persona: dict, current_policy: str, case: dict, domain: str = "Policy") -> str:
     system_prompt = build_system_prompt(persona, domain)
     user_prompt = (
@@ -56,7 +54,6 @@ async def generate_proposal(persona: dict, current_policy: str, case: dict, doma
         f'{{"changes": "Your 1-2 sentence change", "reasoning": "Brief justification (max 2 sentences)"}}'
     )
     return await _call_gemini(system_prompt, user_prompt)
-
 
 async def rate_proposal(persona: dict, current_policy: str, proposal: dict, domain: str = "Policy") -> str:
     system_prompt = build_system_prompt(persona, domain)
@@ -72,7 +69,6 @@ async def rate_proposal(persona: dict, current_policy: str, proposal: dict, doma
         f'{{"score": <number between -1.00 and 1.00>, "justification": "1-2 sentence(s) explaining your rating"}}'
     )
     return await _call_gemini(system_prompt, user_prompt)
-
 
 async def apply_change(base_policy: str, change_text: str, supporting_data: dict, domain: str = "Policy") -> tuple[str, dict]:
     prompt = (
@@ -90,7 +86,6 @@ async def apply_change(base_policy: str, change_text: str, supporting_data: dict
     )
     parsed = json.loads(result)
     return parsed["updated_policy"], parsed["updated_supporting_data"]
-
 
 def _extract_json(text: str) -> str:
     """Return the first complete JSON object from text, ignoring trailing garbage."""
@@ -115,7 +110,6 @@ def _extract_json(text: str) -> str:
             if depth == 0:
                 return text[start:i + 1]
     return text[start:]
-
 
 async def _call_gemini(system_prompt: str, user_prompt: str, retries: int = 3) -> str:
     last_err = None

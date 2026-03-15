@@ -102,6 +102,7 @@ const POLICY_DOMAINS = [
  export function NewSimulationModal({ isOpen, onClose }: NewSimulationModalProps) {
    const [step, setStep] = useState(0);
    const [policyTitle, setPolicyTitle] = useState("");
+   const [policyText, setPolicyText] = useState("");
    const [policyDescription, setPolicyDescription] = useState("");
    const [selectedDomain, setSelectedDomain] = useState("");
    const [domainOpen, setDomainOpen] = useState(false);
@@ -225,7 +226,7 @@ const POLICY_DOMAINS = [
  
    const canProceed =
      step === 0
-       ? policyTitle.trim().length > 0 && selectedDomain.length > 0
+       ? policyTitle.trim().length > 0 && selectedDomain.length > 0 && policyText.trim().length > 0
        : step === 1
        ? selectedAgents.length >= 2
        : true;
@@ -250,8 +251,8 @@ const POLICY_DOMAINS = [
 
       await startSimulation({
         title: policyTitle,
-        description: policyDescription || policyTitle,
-        initial_policy: policyDescription || `Policy proposal: ${policyTitle}`,
+        description: policyDescription || policyText,
+        initial_policy: policyText,
         category: selectedDomain.toLowerCase().replace(/\s*&\s*/g, "-").replace(/\s+/g, "-"),
         supporting_data: {},
         max_rounds: rounds,
@@ -273,6 +274,7 @@ const POLICY_DOMAINS = [
     onClose();
     setStep(0);
     setPolicyTitle("");
+    setPolicyText("");
     setPolicyDescription("");
     setSelectedDomain("");
     setRounds(10);
@@ -438,26 +440,40 @@ const POLICY_DOMAINS = [
                      </div>
  
                      <div className="space-y-2">
+                       <label className="font-['Inter',sans-serif] text-slate-300" style={{ fontSize: "13px", fontWeight: 500 }}>
+                         Initial Policy Text <span className="text-red-400">*</span>
+                       </label>
+                       <textarea
+                         value={policyText}
+                         onChange={(e) => setPolicyText(e.target.value)}
+                         placeholder="Write the current policy statement or proposal that agents will deliberate on. E.g., 'Section 1: The federal minimum wage shall be raised to $15/hr effective January 1, 2026...'"
+                         rows={4}
+                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 transition-all font-['Inter',sans-serif] resize-none"
+                         style={{ fontSize: "13px", lineHeight: "1.6" }}
+                       />
+                     </div>
+
+                     <div className="space-y-2">
                        <div className="flex items-center justify-between">
                          <label className="font-['Inter',sans-serif] text-slate-300" style={{ fontSize: "13px", fontWeight: 500 }}>
-                           Policy Description
+                           Background &amp; Context
                          </label>
                          <span className="font-['Roboto_Mono',monospace] text-slate-600" style={{ fontSize: "10px" }}>Optional</span>
                        </div>
                        <textarea
                          value={policyDescription}
                          onChange={(e) => setPolicyDescription(e.target.value)}
-                         placeholder="Describe the policy details, context, and specific provisions to be analyzed..."
-                         rows={4}
+                         placeholder="Additional context, stakeholder concerns, or data that agents should be aware of..."
+                         rows={3}
                          className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 transition-all font-['Inter',sans-serif] resize-none"
                          style={{ fontSize: "13px", lineHeight: "1.6" }}
                        />
                      </div>
- 
+
                      <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-cyan-500/[0.05] border border-cyan-500/[0.1]">
                        <Info className="w-3.5 h-3.5 text-cyan-400 mt-0.5 flex-shrink-0" />
                        <p className="font-['Inter',sans-serif] text-slate-400" style={{ fontSize: "12px", lineHeight: "1.5" }}>
-                         Be specific about the policy scope. The AI agents will use this context to generate nuanced proposals and economic impact assessments.
+                         The initial policy text is the starting point for deliberation. Agents will propose and debate modifications to it across rounds.
                        </p>
                      </div>
                    </motion.div>
