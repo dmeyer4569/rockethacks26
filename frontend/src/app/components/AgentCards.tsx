@@ -89,7 +89,7 @@ function PeerRatings({ ratings, color }: { ratings: number[]; color: string }) {
 function AgentCard({ agent }: { agent: AgentData }) {
   return (
     <div
-      className={`relative rounded-xl p-5 min-w-[320px] flex-shrink-0 border transition-all ${
+      className={`relative rounded-xl p-5 border transition-all ${
         agent.isWinner ? "border-emerald-500/30" : "border-white/[0.06]"
       }`}
       style={{
@@ -180,7 +180,7 @@ export function AgentCards() {
           </p>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pt-3 pb-2 scrollbar-thin">
+        <div className="flex flex-col gap-4 pt-3">
           {agents.map((agent) => (
             <AgentCard key={agent.name} agent={agent} />
           ))}

@@ -69,14 +69,15 @@ export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
 
           {casesOpen && (
             <div
-              className="absolute top-full left-0 mt-2 w-[340px] rounded-xl border border-white/[0.08] overflow-hidden z-50"
-              style={{ background: "#111827", boxShadow: "0 16px 48px rgba(0,0,0,0.5)" }}
+              className="absolute top-full left-0 mt-2 w-[340px] rounded-xl border border-white/[0.08] overflow-hidden z-50 flex flex-col"
+              style={{ background: "#111827", boxShadow: "0 16px 48px rgba(0,0,0,0.5)", maxHeight: "420px" }}
             >
-              <div className="px-3 py-2 border-b border-white/[0.06]">
+              <div className="px-3 py-2 border-b border-white/[0.06] flex-shrink-0">
                 <p className="font-['Roboto_Mono',monospace] text-slate-500" style={{ fontSize: "10px", letterSpacing: "0.05em" }}>
                   SAVED SIMULATIONS
                 </p>
               </div>
+              <div className="overflow-y-auto flex-1">
               {simulations.length === 0 && (
                 <div className="px-3 py-4 text-center">
                   <p className="font-['Inter',sans-serif] text-slate-500" style={{ fontSize: "13px" }}>
@@ -141,6 +142,7 @@ export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
         </div>
