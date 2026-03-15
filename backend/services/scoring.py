@@ -15,10 +15,10 @@ def calculate_cas(config, proposal: dict) -> dict:
     std_dev = np.std(proposal["ratings"])
     cas = mean - std_dev*config["lambda"]
     
-    proposal["cas"] = round(cas, 4)
-    proposal["mean"] = round(mean, 4)
-    proposal["std_dev"] = round(std_dev, 4)
-    proposal["converged"] = cas >= config["convergence_threshold"] and std_dev <= config["variance-threshold"]
+    proposal["cas"] = float(round(cas, 4))
+    proposal["mean"] = float(round(mean, 4))
+    proposal["std_dev"] = float(round(std_dev, 4))
+    proposal["converged"] = bool(cas >= config["convergence_threshold"] and std_dev <= config["variance-threshold"])
     
     return proposal
     
