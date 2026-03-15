@@ -158,6 +158,14 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       const sim = await fetchSimulation(newSimId);
       setActiveSimulation(sim);
       setRounds([]);
+
+      if (sim.case_title) {
+        const cases = await fetchCases(sim.case_title);
+        setActiveCase(cases[0] ?? null);
+      } else {
+        setActiveCase(null);
+      }
+
       startPolling(newSimId);
       await refreshSimulations();
     } catch (e) {

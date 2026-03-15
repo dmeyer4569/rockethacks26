@@ -234,6 +234,7 @@ const POLICY_DOMAINS = [
 
   useEffect(() => {
     if (!isOpen) return;
+    setCustomAgents([]);
     setAgentsLoading(true);
     fetchPersonas().then((personas) => {
       const agents: Agent[] = personas.map((p, i) => ({
