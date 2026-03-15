@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSimulation } from "../../context/SimulationContext";
+import { fetchPersonas } from "../../lib/api";
 import {
     X,
     Zap,
@@ -48,16 +49,6 @@ const POLICY_DOMAINS = [
    isCustom?: boolean;
  }
  
- const BUILTIN_AGENTS: Agent[] = [
-   { id: "bcw", name: "Blue Collar Worker", color: "#f97316" },
-   { id: "tsc", name: "Tech Startup CEO", color: "#34d399" },
-   { id: "pa", name: "Policy Analyst", color: "#818cf8" },
-   { id: "ur", name: "Union Representative", color: "#f472b6" },
-   { id: "ec", name: "Economist", color: "#38bdf8" },
-   { id: "sb", name: "Small Business Owner", color: "#fbbf24" },
-   { id: "ca", name: "Consumer Advocate", color: "#a78bfa" },
-   { id: "gov", name: "Government Official", color: "#6ee7b7" },
- ];
  
  interface PersonalityTrait {
    id: string;
@@ -88,16 +79,6 @@ const POLICY_DOMAINS = [
    prompt: string;
  }
  
- const DEFAULT_PERSONALITIES: Record<string, AgentPersonality> = {
-   bcw: { trait: "pragmatic", stubbornness: 60, prompt: "" },
-   tsc: { trait: "hawkish", stubbornness: 70, prompt: "" },
-   pa: { trait: "pragmatic", stubbornness: 40, prompt: "" },
-   ur: { trait: "idealistic", stubbornness: 75, prompt: "" },
-   ec: { trait: "dovish", stubbornness: 50, prompt: "" },
-   sb: { trait: "pragmatic", stubbornness: 55, prompt: "" },
-   ca: { trait: "idealistic", stubbornness: 65, prompt: "" },
-   gov: { trait: "collaborative", stubbornness: 45, prompt: "" },
- };
  
  export function NewSimulationModal({ isOpen, onClose }: NewSimulationModalProps) {
    const [step, setStep] = useState(0);
@@ -109,13 +90,9 @@ const POLICY_DOMAINS = [
    const [rounds, setRounds] = useState(10);
    const [consensusThreshold, setConsensusThreshold] = useState(0.6);
    const [selectedPreset, setSelectedPreset] = useState("balanced");
-   const [selectedAgents, setSelectedAgents] = useState<string[]>([
-     "bcw", "tsc", "pa", "ur", "ec",
-   ]);
+   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
    const [convergenceMode, setConvergenceMode] = useState("adaptive");
-   const [agentPersonalities, setAgentPersonalities] = useState<Record<string, AgentPersonality>>(
-     () => JSON.parse(JSON.stringify(DEFAULT_PERSONALITIES))
-   );
+   const [agentPersonalities, setAgentPersonalities] = useState<Record<string, AgentPersonality>>({});
    const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
  
    // Custom agents
@@ -124,10 +101,13 @@ const POLICY_DOMAINS = [
    const [newAgentName, setNewAgentName] = useState("");
    const [newAgentColor, setNewAgentColor] = useState(COLOR_PALETTE[4]);
  
-   const allAgents: Agent[] = [
-     ...BUILTIN_AGENTS,
-     ...customAgents.map((a) => ({ ...a, isCustom: true })),
-   ];
+   const [dbAgents, setDbAgents] = useState<Agent[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+
+  const allAgents: Agent[] = [
+    ...dbAgents,
+    ...customAgents.map((a) => ({ ...a, isCustom: true })),
+  ];
  
    // Custom traits
    const [customTraits, setCustomTraits] = useState<PersonalityTrait[]>([]);
@@ -157,11 +137,11 @@ const POLICY_DOMAINS = [
    };
  
    const handlePresetSelect = (presetId: string) => {
-     setSelectedPreset(presetId);
-     if (presetId === "balanced") setSelectedAgents(["bcw", "tsc", "pa", "ur", "ec"]);
-     else if (presetId === "adversarial") setSelectedAgents(["bcw", "tsc", "ur", "sb", "ca", "gov"]);
-     else if (presetId === "expert") setSelectedAgents(["pa", "ec", "gov", "ca"]);
-   };
+    setSelectedPreset(presetId);
+    if (presetId === "balanced") setSelectedAgents(dbAgents.slice(0, 5).map((a) => a.id));
+    else if (presetId === "adversarial") setSelectedAgents(dbAgents.slice(0, 6).map((a) => a.id));
+    else if (presetId === "expert") setSelectedAgents(dbAgents.slice(0, 4).map((a) => a.id));
+  };
  
    const updatePersonality = (agentId: string, patch: Partial<AgentPersonality>) => {
      setAgentPersonalities((prev) => ({
@@ -232,6 +212,24 @@ const POLICY_DOMAINS = [
        : true;
  
   const { startSimulation } = useSimulation();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setAgentsLoading(true);
+    fetchPersonas().then((personas) => {
+      const agents: Agent[] = personas.map((p, i) => ({
+        id: p._id,
+        name: p.name,
+        color: COLOR_PALETTE[i % COLOR_PALETTE.length],
+      }));
+      setDbAgents(agents);
+      const initial = agents.slice(0, 5).map((a) => a.id);
+      setSelectedAgents(initial);
+      const initPersonalities: Record<string, AgentPersonality> = {};
+      initial.forEach((id) => { initPersonalities[id] = { trait: "pragmatic", stubbornness: 50, prompt: "" }; });
+      setAgentPersonalities(initPersonalities);
+    }).catch(() => {}).finally(() => setAgentsLoading(false));
+  }, [isOpen]);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -280,8 +278,8 @@ const POLICY_DOMAINS = [
     setRounds(10);
     setConsensusThreshold(0.6);
     setSelectedPreset("balanced");
-    setSelectedAgents(["bcw", "tsc", "pa", "ur", "ec"]);
-    setAgentPersonalities(JSON.parse(JSON.stringify(DEFAULT_PERSONALITIES)));
+    setSelectedAgents(dbAgents.slice(0, 5).map((a) => a.id));
+    setAgentPersonalities({});
     setCustomAgents([]);
     setShowNewAgent(false);
     setCustomTraits([]);
@@ -532,7 +530,12 @@ const POLICY_DOMAINS = [
                          </span>
                        </div>
                        <div className="grid grid-cols-2 gap-2">
-                         {allAgents.map((agent) => {
+                         {agentsLoading && (
+                           <div className="col-span-2 py-6 text-center font-['Inter',sans-serif] text-slate-500" style={{ fontSize: "13px" }}>
+                             Loading agents...
+                           </div>
+                         )}
+                         {!agentsLoading && allAgents.map((agent) => {
                            const isSelected = selectedAgents.includes(agent.id);
                            return (
                              <div
