@@ -58,10 +58,10 @@ async def run_simulation(
 
     personas = await get_random_personas(NUM_AGENTS)
 
-    for round_num in range(1, MAX_ROUNDS + 1):
-        print(f"\n--- Round {round_num}/{MAX_ROUNDS} ---")
-
+    try:
         for round_num in range(1, max_rounds + 1):
+            print(f"\n--- Round {round_num}/{max_rounds} ---")
+
             raw_proposals = await asyncio.gather(*[
                 generate_proposal(persona, current_policy, case)
                 for persona in personas
@@ -92,29 +92,42 @@ async def run_simulation(
             calculate_cas(config, proposal_record)
             scored_proposals.append(proposal_record)
 
-        winner = select_policy(scored_proposals)
-        winner_idx = scored_proposals.index(winner)
-        cas_history.append(winner["cas"])
+            winner = select_policy(scored_proposals)
+            winner_idx = scored_proposals.index(winner)
+            cas_history.append(winner["cas"])
 
-        print(f"  Winner: {winner['persona_name']} (index {winner_idx})")
-        print(f"  Winning CAS: {winner['cas']:.4f}")
-        print(f"  Converged: {winner['converged']}")
-        for prop in scored_proposals:
-            print(f"    [{prop['agent_index']}] {prop['persona_name']:30s}  CAS={prop['cas']:.4f}  ratings={prop['ratings']}")
+            print(f"  Winner: {winner['persona_name']} (index {winner_idx})")
+            print(f"  Winning CAS: {winner['cas']:.4f}")
+            print(f"  Converged: {winner['converged']}")
+            for prop in scored_proposals:
+                print(f"    [{prop['agent_index']}] {prop['persona_name']:30s}  CAS={prop['cas']:.4f}  ratings={prop['ratings']}")
 
-        personas_used = [
-            {"agent_index": i, "persona_name": p["name"]}
-            for i, p in enumerate(personas)
-        ]
-        await insert_round(
-            simulation_id=sim_id,
-            round_number=round_num,
-            base_policy=current_policy,
-            personas_used=personas_used,
-            proposals=scored_proposals,
-            winning_proposal_index=winner_idx,
-            winning_cas=winner["cas"],
-        )
+            personas_used = [
+                {"agent_index": i, "persona_name": p["name"]}
+                for i, p in enumerate(personas)
+            ]
+            await insert_round(
+                simulation_id=sim_id,
+                round_number=round_num,
+                base_policy=current_policy,
+                personas_used=personas_used,
+                proposals=scored_proposals,
+                winning_proposal_index=winner_idx,
+                winning_cas=winner["cas"],
+            )
+
+            print(f"  Policy after round {round_num}: {current_policy}")
+
+            if winner["converged"]:
+                final_status = "converged"
+                print(f"  -> Converged after round {round_num}")
+                break
+
+            if check_stagnation(cas_history):
+                final_status = "stagnated"
+                print(f"  -> Stagnated after round {round_num} (CAS history: {cas_history[-3:]})")
+                break
+
     except Exception:
         traceback.print_exc()
         await update_simulation(
@@ -124,17 +137,6 @@ async def run_simulation(
             final_policy=current_policy if round_num > 0 else None,
             final_cas=winner["cas"] if winner else None,
         )
-        print(f"  Policy after round {round_num}: {current_policy}")
-
-        if winner["converged"]:
-            final_status = "converged"
-            print(f"  -> Converged after round {round_num}")
-            break
-
-        if check_stagnation(cas_history):
-            final_status = "stagnated"
-            print(f"  -> Stagnated after round {round_num} (CAS history: {cas_history[-3:]})")
-            break
 
     await update_simulation(
         sim_id=sim_id,
