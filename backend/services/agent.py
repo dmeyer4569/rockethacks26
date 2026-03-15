@@ -3,8 +3,8 @@ import json
 from google import genai
 from google.genai import types
 
-_client = None
-MODEL = "gemini-2.0-flash"
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+MODEL = "gemini-2.5-flash-lite"
 
 
 def _get_client():
@@ -77,6 +77,31 @@ async def apply_change(base_policy: str, change_text: str, supporting_data: dict
     return parsed["updated_policy"], parsed["updated_supporting_data"]
 
 
+def _extract_json(text: str) -> str:
+    """Return the first complete JSON object from text, ignoring trailing garbage."""
+    start = next((i for i, c in enumerate(text) if c in "{["), None)
+    if start is None:
+        return text
+    opener, closer = ("{", "}") if text[start] == "{" else ("[", "]")
+    depth, in_string, escape = 0, False, False
+    for i, c in enumerate(text[start:], start):
+        if escape:
+            escape = False; continue
+        if c == "\\" and in_string:
+            escape = True; continue
+        if c == '"':
+            in_string = not in_string; continue
+        if in_string:
+            continue
+        if c == opener:
+            depth += 1
+        elif c == closer:
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return text[start:]
+
+
 async def _call_gemini(system_prompt: str, user_prompt: str) -> str:
     client = _get_client()
     response = await client.aio.models.generate_content(
@@ -88,4 +113,4 @@ async def _call_gemini(system_prompt: str, user_prompt: str) -> str:
             temperature=0.7,
         ),
     )
-    return response.text
+    return _extract_json(response.text)
