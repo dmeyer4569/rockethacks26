@@ -1,8 +1,5 @@
 # My Precious Secrets
-
 .venv/
 .env
 node_modules/
-backend\services\__pycache__
-backend\routes\__pycache__
 *.pyc
