@@ -1,17 +1,10 @@
 import { ChevronDown, Plus, Clock } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-
-const SAVED_CASES = [
-  { id: "c1", name: "Min. Wage $15 Analysis", domain: "Labor & Wages", status: "completed", date: "Mar 12, 2026", rounds: "10/10" },
-  { id: "c2", name: "Carbon Tax Impact Study", domain: "Climate & Energy", status: "running", date: "Mar 14, 2026", rounds: "6/12" },
-  { id: "c3", name: "Universal Healthcare Model", domain: "Healthcare", status: "completed", date: "Mar 8, 2026", rounds: "8/8" },
-  { id: "c4", name: "Tariff Escalation Scenario", domain: "Trade & Tariffs", status: "paused", date: "Mar 5, 2026", rounds: "4/10" },
-  { id: "c5", name: "Rent Control Effectiveness", domain: "Housing", status: "completed", date: "Feb 28, 2026", rounds: "15/15" },
-];
+import { useSimulation } from "../../context/SimulationContext";
 
 export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
+  const { simulations, activeSimulation, selectSimulation } = useSimulation();
   const [casesOpen, setCasesOpen] = useState(false);
-  const [activeCase, setActiveCase] = useState(SAVED_CASES[0]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,12 +18,28 @@ export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
   }, []);
 
   const statusColor = (s: string) =>
-    s === "completed" ? "#34d399" : s === "running" ? "#38bdf8" : "#f97316";
+    s === "converged" || s === "max_rounds" ? "#34d399" : s === "running" ? "#38bdf8" : "#f97316";
+
+  const statusLabel = (s: string) =>
+    s === "converged" ? "completed" : s === "max_rounds" ? "completed" : s;
+
+  const formatDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return "";
+    }
+  };
+
+  const activeLabel = activeSimulation
+    ? (activeSimulation.case_title ?? `Simulation ${activeSimulation._id.slice(-6)}`)
+    : "No simulation selected";
+
+  const activeStatus = activeSimulation?.status ?? "running";
 
   return (
     <nav className="flex items-center justify-between px-6 py-3 border-b border-white/[0.06] bg-[#0B1120]">
       <div className="flex items-center gap-6">
-        {/* Logo */}
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
             <span className="text-[#0F172A] font-['Roboto_Mono',monospace]" style={{ fontSize: '14px', fontWeight: 700 }}>E</span>
@@ -40,7 +49,6 @@ export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
           </span>
         </div>
 
-        {/* Cases Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setCasesOpen(!casesOpen)}
@@ -53,9 +61,9 @@ export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
           >
             <span
               className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-              style={{ background: statusColor(activeCase.status) }}
+              style={{ background: statusColor(activeStatus) }}
             />
-            <span className="max-w-[160px] truncate">{activeCase.name}</span>
+            <span className="max-w-[200px] truncate">{activeLabel}</span>
             <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${casesOpen ? "rotate-180" : ""}`} />
           </button>
 
@@ -69,40 +77,56 @@ export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
                   SAVED SIMULATIONS
                 </p>
               </div>
-              {SAVED_CASES.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => { setActiveCase(c); setCasesOpen(false); }}
-                  className={`w-full text-left px-3 py-2.5 hover:bg-white/[0.04] transition-colors flex items-start gap-2.5 ${
-                    activeCase.id === c.id ? "bg-white/[0.03]" : ""
-                  }`}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
-                    style={{ background: statusColor(c.status) }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className={`font-['Inter',sans-serif] truncate ${activeCase.id === c.id ? "text-white" : "text-slate-300"}`} style={{ fontSize: "13px", fontWeight: 500 }}>
-                        {c.name}
-                      </p>
-                      <span className="font-['Roboto_Mono',monospace] text-slate-600 flex-shrink-0" style={{ fontSize: "10px" }}>
-                        {c.rounds}
-                      </span>
+              {simulations.length === 0 && (
+                <div className="px-3 py-4 text-center">
+                  <p className="font-['Inter',sans-serif] text-slate-500" style={{ fontSize: "13px" }}>
+                    No simulations yet
+                  </p>
+                </div>
+              )}
+              {simulations.map((sim) => {
+                const isActive = activeSimulation?._id === sim._id;
+                const roundsLabel = sim.finished_round != null
+                  ? `${sim.finished_round}/${sim.config.max_rounds}`
+                  : `0/${sim.config.max_rounds}`;
+                return (
+                  <button
+                    key={sim._id}
+                    onClick={() => { selectSimulation(sim._id); setCasesOpen(false); }}
+                    className={`w-full text-left px-3 py-2.5 hover:bg-white/[0.04] transition-colors flex items-start gap-2.5 ${
+                      isActive ? "bg-white/[0.03]" : ""
+                    }`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                      style={{ background: statusColor(sim.status) }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`font-['Inter',sans-serif] truncate ${isActive ? "text-white" : "text-slate-300"}`} style={{ fontSize: "13px", fontWeight: 500 }}>
+                          {sim.case_title ?? `Simulation ${sim._id.slice(-6)}`}
+                        </p>
+                        <span className="font-['Roboto_Mono',monospace] text-slate-600 flex-shrink-0" style={{ fontSize: "10px" }}>
+                          {roundsLabel}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-['Roboto_Mono',monospace] text-slate-500" style={{ fontSize: "10px" }}>
+                          {statusLabel(sim.status)}
+                        </span>
+                        <span className="text-slate-700" style={{ fontSize: "10px" }}>/</span>
+                        <span className="font-['Roboto_Mono',monospace] text-slate-600" style={{ fontSize: "10px" }}>
+                          {formatDate(sim.started_at)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="font-['Roboto_Mono',monospace] text-slate-500" style={{ fontSize: "10px" }}>{c.domain}</span>
-                      <span className="text-slate-700" style={{ fontSize: "10px" }}>/</span>
-                      <span className="font-['Roboto_Mono',monospace] text-slate-600" style={{ fontSize: "10px" }}>{c.date}</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* New Simulation Button */}
         <button onClick={onNewSimulation} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[#0F172A] transition-colors font-['Inter',sans-serif]" style={{ fontSize: '13px', fontWeight: 600 }}>
           <Plus className="w-3.5 h-3.5" />
           New Simulation

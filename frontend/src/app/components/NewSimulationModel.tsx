@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSimulation } from "../../context/SimulationContext";
 import {
     X,
     Zap,
@@ -229,22 +230,43 @@ const POLICY_DOMAINS = [
        ? selectedAgents.length >= 2
        : true;
  
-   const handleSubmit = () => {
-     onClose();
-     setStep(0);
-     setPolicyTitle("");
-     setPolicyDescription("");
-     setSelectedDomain("");
-     setRounds(10);
-     setConsensusThreshold(0.6);
-     setSelectedPreset("balanced");
-     setSelectedAgents(["bcw", "tsc", "pa", "ur", "ec"]);
-     setAgentPersonalities(JSON.parse(JSON.stringify(DEFAULT_PERSONALITIES)));
-     setCustomAgents([]);
-     setShowNewAgent(false);
-     setCustomTraits([]);
-     setShowNewTrait(false);
-   };
+  const { startSimulation } = useSimulation();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await startSimulation({
+        title: policyTitle,
+        description: policyDescription || policyTitle,
+        initial_policy: policyDescription || `Policy proposal: ${policyTitle}`,
+        category: selectedDomain.toLowerCase().replace(/\s*&\s*/g, "-").replace(/\s+/g, "-"),
+        supporting_data: {},
+        max_rounds: rounds,
+        num_agents: selectedAgents.length,
+        cas_threshold: consensusThreshold,
+        variance_threshold: 0.15,
+      });
+    } catch (e) {
+      console.error("Failed to start simulation", e);
+    } finally {
+      setSubmitting(false);
+    }
+    onClose();
+    setStep(0);
+    setPolicyTitle("");
+    setPolicyDescription("");
+    setSelectedDomain("");
+    setRounds(10);
+    setConsensusThreshold(0.6);
+    setSelectedPreset("balanced");
+    setSelectedAgents(["bcw", "tsc", "pa", "ur", "ec"]);
+    setAgentPersonalities(JSON.parse(JSON.stringify(DEFAULT_PERSONALITIES)));
+    setCustomAgents([]);
+    setShowNewAgent(false);
+    setCustomTraits([]);
+    setShowNewTrait(false);
+  };
  
    return (
      <AnimatePresence>
@@ -1171,14 +1193,19 @@ const POLICY_DOMAINS = [
                      Continue
                    </button>
                  ) : (
-                   <button
-                     onClick={handleSubmit}
-                     className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#0F172A] transition-colors font-['Inter',sans-serif]"
-                     style={{ fontSize: "13px", fontWeight: 600 }}
-                   >
-                     <Zap className="w-3.5 h-3.5" />
-                     Launch Simulation
-                   </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className={`flex items-center gap-1.5 px-5 py-2 rounded-xl transition-colors font-['Inter',sans-serif] ${
+                      submitting
+                        ? "bg-emerald-500/50 cursor-wait text-[#0F172A]/60"
+                        : "bg-emerald-500 hover:bg-emerald-400 text-[#0F172A]"
+                    }`}
+                    style={{ fontSize: "13px", fontWeight: 600 }}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    {submitting ? "Launching..." : "Launch Simulation"}
+                  </button>
                  )}
                </div>
              </div>
