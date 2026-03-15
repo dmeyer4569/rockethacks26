@@ -97,7 +97,7 @@ async def run_simulation(
                     for rater in raters
                 ])
                 rating_dicts = [json.loads(r) for r in raw_ratings]
-                rater_indices = [i for i in range(num_agents) if i != prop_idx]
+                rater_indices = [i for i in range(len(personas)) if i != prop_idx]
 
                 proposal_record = {
                     "agent_index": prop_idx,
