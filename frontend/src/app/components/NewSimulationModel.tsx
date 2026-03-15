@@ -236,6 +236,18 @@ const POLICY_DOMAINS = [
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
+      const agentPersonalitiesPayload: Record<string, { trait: string; trait_desc: string; stubbornness: number; prompt: string }> = {};
+      for (const agentId of selectedAgents) {
+        const p = agentPersonalities[agentId] ?? { trait: "pragmatic", stubbornness: 50, prompt: "" };
+        const traitDef = allTraits.find((t) => t.id === p.trait);
+        agentPersonalitiesPayload[agentId] = {
+          trait: traitDef?.label ?? p.trait,
+          trait_desc: traitDef?.desc ?? "",
+          stubbornness: p.stubbornness,
+          prompt: p.prompt,
+        };
+      }
+
       await startSimulation({
         title: policyTitle,
         description: policyDescription || policyTitle,
@@ -246,6 +258,12 @@ const POLICY_DOMAINS = [
         num_agents: selectedAgents.length,
         cas_threshold: consensusThreshold,
         variance_threshold: 0.15,
+        convergence_mode: convergenceMode as "fixed" | "adaptive" | "exploratory",
+        agents: selectedAgents.map((id) => {
+          const agent = allAgents.find((a) => a.id === id)!;
+          return { id: agent.id, name: agent.name };
+        }),
+        agent_personalities: agentPersonalitiesPayload,
       });
     } catch (e) {
       console.error("Failed to start simulation", e);
@@ -1076,9 +1094,9 @@ const POLICY_DOMAINS = [
                        </label>
                        <div className="grid grid-cols-3 gap-2">
                          {[
-                           { id: "fixed", label: "Fixed", desc: "Run all rounds" },
-                           { id: "adaptive", label: "Adaptive", desc: "Stop at consensus" },
-                           { id: "exploratory", label: "Exploratory", desc: "Extend if needed" },
+                           { id: "fixed", label: "Fixed", desc: "Run all rounds regardless of consensus" },
+                           { id: "adaptive", label: "Adaptive", desc: "Stop at consensus or stagnation" },
+                           { id: "exploratory", label: "Exploratory", desc: "Stop at consensus, push through stagnation" },
                          ].map((mode) => (
                            <button
                              key={mode.id}

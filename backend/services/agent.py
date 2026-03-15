@@ -8,15 +8,39 @@ MODEL = "gemini-2.5-flash-lite"
 
 
 def build_system_prompt(persona: dict) -> str:
-    return (
+    prompt = (
         f"You are a simulated economic stakeholder participating in a policy deliberation.\n\n"
         f"IDENTITY: {persona['name']}\n"
         f"BACKGROUND: {persona['description']}\n"
         f"ECONOMIC PRIORITIES: {', '.join(persona['priorities'])}\n"
         f"RISK TOLERANCE: {persona['risk_tolerance']}\n"
-        f"VALUES: {', '.join(persona['values'])}\n\n"
-        f"You must respond ONLY from this perspective. Be specific and concise."
+        f"VALUES: {', '.join(persona['values'])}\n"
     )
+
+    stubbornness = persona.get("stubbornness")
+    if stubbornness is not None:
+        if stubbornness >= 70:
+            flexibility = "You are highly firm in your position. Only accept or propose changes that strongly align with your core interests."
+        elif stubbornness >= 40:
+            flexibility = "You are moderately flexible. You can accept reasonable compromises that partially serve your interests."
+        else:
+            flexibility = "You are open-minded and flexible. You readily support changes that achieve broad consensus, even if they don't fully serve your interests."
+        prompt += f"NEGOTIATION STYLE: {flexibility}\n"
+
+    trait = persona.get("trait", "").strip()
+    trait_desc = persona.get("trait_desc", "").strip()
+    if trait:
+        prompt += f"PERSONALITY TRAIT: {trait}"
+        if trait_desc:
+            prompt += f" — {trait_desc}"
+        prompt += "\n"
+
+    custom_prompt = persona.get("custom_prompt", "").strip()
+    if custom_prompt:
+        prompt += f"ADDITIONAL CONTEXT: {custom_prompt}\n"
+
+    prompt += "\nYou must respond ONLY from this perspective. Be specific and concise."
+    return prompt
 
 
 async def generate_proposal(persona: dict, current_policy: str, case: dict) -> str:

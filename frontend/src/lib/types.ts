@@ -75,6 +75,18 @@ export interface Persona {
   values: string[];
 }
 
+export interface AgentPersonalityRequest {
+  trait: string;
+  trait_desc: string;
+  stubbornness: number;
+  prompt: string;
+}
+
+export interface AgentRequest {
+  id: string;
+  name: string;
+}
+
 export interface SimulationCreateRequest {
   title: string;
   description: string;
@@ -85,4 +97,7 @@ export interface SimulationCreateRequest {
   num_agents?: number;
   cas_threshold?: number;
   variance_threshold?: number;
+  convergence_mode?: "fixed" | "adaptive" | "exploratory";
+  agents?: AgentRequest[];
+  agent_personalities?: Record<string, AgentPersonalityRequest>;
 }
