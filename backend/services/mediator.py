@@ -43,6 +43,7 @@ async def run_simulation(case_name: str) -> dict:
     personas = await get_random_personas(NUM_AGENTS)
 
     for round_num in range(1, MAX_ROUNDS + 1):
+        print(f"\n--- Round {round_num}/{MAX_ROUNDS} ---")
 
         raw_proposals = await asyncio.gather(*[
             generate_proposal(persona, current_policy, case)
@@ -88,6 +89,12 @@ async def run_simulation(case_name: str) -> dict:
         winner_idx = scored_proposals.index(winner)
         cas_history.append(winner["cas"])
 
+        print(f"  Winner: {winner['persona_name']} (index {winner_idx})")
+        print(f"  Winning CAS: {winner['cas']:.4f}")
+        print(f"  Converged: {winner['converged']}")
+        for prop in scored_proposals:
+            print(f"    [{prop['agent_index']}] {prop['persona_name']:30s}  CAS={prop['cas']:.4f}  ratings={prop['ratings']}")
+
         personas_used = [
             {"agent_index": i, "persona_name": p["name"]}
             for i, p in enumerate(personas)
@@ -105,13 +112,16 @@ async def run_simulation(case_name: str) -> dict:
         current_policy, case["supporting_data"] = await apply_change(
             current_policy, winner["changes"], case.get("supporting_data", {})
         )
+        print(f"  Policy after round {round_num}: {current_policy}")
 
         if winner["converged"]:
             final_status = "converged"
+            print(f"  -> Converged after round {round_num}")
             break
 
         if check_stagnation(cas_history):
             final_status = "stagnated"
+            print(f"  -> Stagnated after round {round_num} (CAS history: {cas_history[-3:]})")
             break
 
     await update_simulation(
