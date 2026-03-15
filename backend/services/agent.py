@@ -7,6 +7,16 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL = "gemini-2.5-flash-lite"
 
 
+def _get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY not set. Set it in .env to run simulations.")
+        _client = genai.Client(api_key=api_key)
+    return _client
+
+
 def build_system_prompt(persona: dict) -> str:
     return (
         f"You are a simulated economic stakeholder participating in a policy deliberation.\n\n"
@@ -93,6 +103,7 @@ def _extract_json(text: str) -> str:
 
 
 async def _call_gemini(system_prompt: str, user_prompt: str) -> str:
+    client = _get_client()
     response = await client.aio.models.generate_content(
         model=MODEL,
         contents=user_prompt,

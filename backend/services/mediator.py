@@ -1,5 +1,6 @@
 import asyncio
 import json
+import traceback
 
 from models.reader import read_cases, read_rounds
 from models.writer import insert_simulation, update_simulation, insert_round
@@ -14,18 +15,29 @@ CAS_THRESHOLD = 0.60
 VARIANCE_THRESHOLD = 0.15
 STAGNATE_DELTA = 0.001
 
-async def run_simulation(case_name: str) -> dict:
+
+async def run_simulation(
+    case_name: str,
+    case_id: str | None = None,
+    max_rounds: int = MAX_ROUNDS,
+    num_agents: int = NUM_AGENTS,
+    cas_threshold: float = CAS_THRESHOLD,
+    variance_threshold: float = VARIANCE_THRESHOLD,
+) -> dict:
     cases = await read_cases(title=case_name)
     case = cases[0] if cases else None
     if not case:
         raise ValueError(f"Case '{case_name}' not found")
 
+    if case_id is None:
+        case_id = case.get("_id")
+
     config = {
-        "num_agents": NUM_AGENTS,
+        "num_agents": num_agents,
         "lambda": PENALTY,
-        "convergence_threshold": CAS_THRESHOLD,
-        "variance-threshold" : VARIANCE_THRESHOLD,
-        "max_rounds": MAX_ROUNDS,
+        "convergence_threshold": cas_threshold,
+        "variance-threshold": variance_threshold,
+        "max_rounds": max_rounds,
     }
 
     sim_id = await insert_simulation(
@@ -34,31 +46,25 @@ async def run_simulation(case_name: str) -> dict:
         finished_round=None,
         final_policy=None,
         final_cas=None,
+        case_id=case_id,
+        case_title=case_name,
     )
 
     current_policy = case["initial_policy"]
     cas_history = []
     final_status = "max_rounds"
     winner = None
+    round_num = 0
 
     personas = await get_random_personas(NUM_AGENTS)
 
     for round_num in range(1, MAX_ROUNDS + 1):
         print(f"\n--- Round {round_num}/{MAX_ROUNDS} ---")
 
-        raw_proposals = await asyncio.gather(*[
-            generate_proposal(persona, current_policy, case)
-            for persona in personas
-        ])
-        proposals = [json.loads(r) for r in raw_proposals]
-
-        scored_proposals = []
-        for prop_idx, proposal in enumerate(proposals):
-            raters = [p for i, p in enumerate(personas) if i != prop_idx]
-
-            raw_ratings = await asyncio.gather(*[
-                rate_proposal(rater, current_policy, proposal)
-                for rater in raters
+        for round_num in range(1, max_rounds + 1):
+            raw_proposals = await asyncio.gather(*[
+                generate_proposal(persona, current_policy, case)
+                for persona in personas
             ])
             rating_dicts = [json.loads(r) for r in raw_ratings]
 
@@ -109,9 +115,14 @@ async def run_simulation(case_name: str) -> dict:
             winning_proposal_index=winner_idx,
             winning_cas=winner["cas"],
         )
-
-        current_policy, case["supporting_data"] = await apply_change(
-            current_policy, winner["changes"], case.get("supporting_data", {})
+    except Exception:
+        traceback.print_exc()
+        await update_simulation(
+            sim_id=sim_id,
+            status="error",
+            finished_round=round_num,
+            final_policy=current_policy if round_num > 0 else None,
+            final_cas=winner["cas"] if winner else None,
         )
         print(f"  Policy after round {round_num}: {current_policy}")
 
@@ -143,7 +154,6 @@ async def run_simulation(case_name: str) -> dict:
         "final_cas": winner["cas"] if winner else None,
         "rounds": rounds,
     }
-    
 
 def check_stagnation(cas_history: list, delta = STAGNATE_DELTA, window: int = 3) -> bool:
     if len(cas_history) < window + 1:
