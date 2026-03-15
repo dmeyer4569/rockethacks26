@@ -16,7 +16,7 @@ async def insert_case(title, description, initial_policy, supporting_data, categ
     result = await db_manager.cases.insert_one(document)
     return result.inserted_id
 # Save simulation_data to MongoDB
-async def insert_simulation(status, config, finished_round, final_policy, final_cas, case_id=None, case_title=None):
+async def insert_simulation(status, config, finished_round, final_policy, final_cas, case_id=None, case_title=None, agents=None, agent_personalities=None):
     document = {
         "status": status,
         "config": config,
@@ -25,6 +25,8 @@ async def insert_simulation(status, config, finished_round, final_policy, final_
         "final_cas": final_cas,
         "case_id": case_id,
         "case_title": case_title,
+        "agents": agents or [],
+        "agent_personalities": agent_personalities or {},
         "started_at": datetime.now(timezone.utc),
         "completed_at": datetime.now(timezone.utc)
     }

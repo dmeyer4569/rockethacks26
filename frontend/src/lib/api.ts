@@ -50,3 +50,11 @@ export async function createSimulation(body: SimulationCreateRequest): Promise<s
   const data = await json<{ simulation_id: string }>(res);
   return data.simulation_id;
 }
+
+export async function rerunSimulation(simId: string): Promise<string> {
+  const res = await fetch(`${BASE}/write/simulations/${encodeURIComponent(simId)}/rerun`, {
+    method: "POST",
+  });
+  const data = await json<{ simulation_id: string }>(res);
+  return data.simulation_id;
+}

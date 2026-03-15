@@ -14,6 +14,7 @@ import {
   fetchRounds,
   fetchCases,
   createSimulation,
+  rerunSimulation,
 } from "../lib/api";
 
 interface SimulationContextValue {
@@ -24,6 +25,7 @@ interface SimulationContextValue {
   loading: boolean;
   error: string | null;
   startSimulation: (req: SimulationCreateRequest) => Promise<void>;
+  rerunSimulationById: (simId: string) => Promise<void>;
   selectSimulation: (id: string) => Promise<void>;
   refreshSimulations: () => Promise<void>;
 }
@@ -147,6 +149,24 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     }
   }, [stopPolling, startPolling, refreshSimulations]);
 
+  const rerunSimulationByIdFn = useCallback(async (simId: string) => {
+    stopPolling();
+    setLoading(true);
+    setError(null);
+    try {
+      const newSimId = await rerunSimulation(simId);
+      const sim = await fetchSimulation(newSimId);
+      setActiveSimulation(sim);
+      setRounds([]);
+      startPolling(newSimId);
+      await refreshSimulations();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to rerun simulation");
+    } finally {
+      setLoading(false);
+    }
+  }, [stopPolling, startPolling, refreshSimulations]);
+
   // Load simulations list on mount
   useEffect(() => {
     refreshSimulations();
@@ -167,6 +187,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         loading,
         error,
         startSimulation: startSimulationFn,
+        rerunSimulationById: rerunSimulationByIdFn,
         selectSimulation,
         refreshSimulations,
       }}

@@ -1,9 +1,9 @@
-import { ChevronDown, Plus, Clock } from "lucide-react";
+import { ChevronDown, Plus, Clock, RotateCcw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useSimulation } from "../../context/SimulationContext";
 
 export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
-  const { simulations, activeSimulation, selectSimulation } = useSimulation();
+  const { simulations, activeSimulation, selectSimulation, rerunSimulationById, loading } = useSimulation();
   const [casesOpen, setCasesOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -90,37 +90,55 @@ export function TopNav({ onNewSimulation }: { onNewSimulation: () => void }) {
                   ? `${sim.finished_round}/${sim.config.max_rounds}`
                   : `0/${sim.config.max_rounds}`;
                 return (
-                  <button
+                  <div
                     key={sim._id}
-                    onClick={() => { selectSimulation(sim._id); setCasesOpen(false); }}
-                    className={`w-full text-left px-3 py-2.5 hover:bg-white/[0.04] transition-colors flex items-start gap-2.5 ${
+                    className={`flex items-start gap-2.5 px-3 py-2.5 hover:bg-white/[0.04] transition-colors ${
                       isActive ? "bg-white/[0.03]" : ""
                     }`}
                   >
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
-                      style={{ background: statusColor(sim.status) }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`font-['Inter',sans-serif] truncate ${isActive ? "text-white" : "text-slate-300"}`} style={{ fontSize: "13px", fontWeight: 500 }}>
-                          {sim.case_title ?? `Simulation ${sim._id.slice(-6)}`}
-                        </p>
-                        <span className="font-['Roboto_Mono',monospace] text-slate-600 flex-shrink-0" style={{ fontSize: "10px" }}>
-                          {roundsLabel}
-                        </span>
+                    <button
+                      onClick={() => { selectSimulation(sim._id); setCasesOpen(false); }}
+                      className="flex items-start gap-2.5 flex-1 min-w-0 text-left"
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"
+                        style={{ background: statusColor(sim.status) }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`font-['Inter',sans-serif] truncate ${isActive ? "text-white" : "text-slate-300"}`} style={{ fontSize: "13px", fontWeight: 500 }}>
+                            {sim.case_title ?? `Simulation ${sim._id.slice(-6)}`}
+                          </p>
+                          <span className="font-['Roboto_Mono',monospace] text-slate-600 flex-shrink-0" style={{ fontSize: "10px" }}>
+                            {roundsLabel}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="font-['Roboto_Mono',monospace] text-slate-500" style={{ fontSize: "10px" }}>
+                            {statusLabel(sim.status)}
+                          </span>
+                          <span className="text-slate-700" style={{ fontSize: "10px" }}>/</span>
+                          <span className="font-['Roboto_Mono',monospace] text-slate-600" style={{ fontSize: "10px" }}>
+                            {formatDate(sim.started_at)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="font-['Roboto_Mono',monospace] text-slate-500" style={{ fontSize: "10px" }}>
-                          {statusLabel(sim.status)}
-                        </span>
-                        <span className="text-slate-700" style={{ fontSize: "10px" }}>/</span>
-                        <span className="font-['Roboto_Mono',monospace] text-slate-600" style={{ fontSize: "10px" }}>
-                          {formatDate(sim.started_at)}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                    {sim.status !== "running" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          rerunSimulationById(sim._id);
+                          setCasesOpen(false);
+                        }}
+                        disabled={loading}
+                        title="Rerun this simulation"
+                        className="flex-shrink-0 p-1 rounded text-slate-500 hover:text-emerald-400 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>

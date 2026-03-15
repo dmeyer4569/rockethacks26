@@ -1,8 +1,8 @@
 import asyncio
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from models.schema import CaseCreate, SimulationCreate
 from models.writer import insert_case, insert_persona, insert_simulation
-from models.reader import read_cases, read_personas
+from models.reader import read_cases, read_personas, read_simulations
 from services.mediator import run_simulation
 
 router = APIRouter(
@@ -50,12 +50,16 @@ async def post_simulation(body: SimulationCreate):
                     p["risk_tolerance"], p["values"],
                 )
 
+    agents = [a.model_dump() for a in body.agents]
+    agent_personalities = {k: v.model_dump() for k, v in body.agent_personalities.items()}
+
     config = {
         "num_agents": body.num_agents,
         "lambda": 0.5,
         "convergence_threshold": body.cas_threshold,
         "variance-threshold": body.variance_threshold,
         "max_rounds": body.max_rounds,
+        "convergence_mode": body.convergence_mode,
     }
     sim_id = await insert_simulation(
         status="running",
@@ -65,6 +69,8 @@ async def post_simulation(body: SimulationCreate):
         final_cas=None,
         case_id=case_id,
         case_title=body.title,
+        agents=agents,
+        agent_personalities=agent_personalities,
     )
 
     asyncio.create_task(run_simulation(
@@ -75,8 +81,47 @@ async def post_simulation(body: SimulationCreate):
         cas_threshold=body.cas_threshold,
         variance_threshold=body.variance_threshold,
         convergence_mode=body.convergence_mode,
-        agents=[a.model_dump() for a in body.agents],
-        agent_personalities={k: v.model_dump() for k, v in body.agent_personalities.items()},
+        agents=agents,
+        agent_personalities=agent_personalities,
     ))
 
     return {"simulation_id": str(sim_id)}
+
+
+@router.post("/simulations/{sim_id}/rerun")
+async def rerun_simulation(sim_id: str):
+    sims = await read_simulations(simulation_id=sim_id)
+    if not sims:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    original = sims[0]
+    config = original["config"]
+    case_title = original.get("case_title")
+    agents = original.get("agents", [])
+    agent_personalities = original.get("agent_personalities", {})
+
+    new_sim_id = await insert_simulation(
+        status="running",
+        config=config,
+        finished_round=None,
+        final_policy=None,
+        final_cas=None,
+        case_id=original.get("case_id"),
+        case_title=case_title,
+        agents=agents,
+        agent_personalities=agent_personalities,
+    )
+
+    asyncio.create_task(run_simulation(
+        sim_id=new_sim_id,
+        case_name=case_title,
+        max_rounds=config["max_rounds"],
+        num_agents=config["num_agents"],
+        cas_threshold=config["convergence_threshold"],
+        variance_threshold=config.get("variance-threshold", 0.15),
+        convergence_mode=config.get("convergence_mode", "adaptive"),
+        agents=agents,
+        agent_personalities=agent_personalities,
+    ))
+
+    return {"simulation_id": str(new_sim_id)}
