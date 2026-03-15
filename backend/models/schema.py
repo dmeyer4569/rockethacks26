@@ -2,6 +2,24 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal
 
 
+class PersonaCreate(BaseModel):
+    name: str
+    description: str = ""
+    priorities: list[str] = []
+    risk_tolerance: str = "medium"
+    values: list[str] = []
+    custom_prompt: str = ""
+
+
+class PersonaUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    priorities: Optional[list[str]] = None
+    risk_tolerance: Optional[str] = None
+    values: Optional[list[str]] = None
+    custom_prompt: Optional[str] = None
+
+
 class CaseCreate(BaseModel):
     title: str
     description: str

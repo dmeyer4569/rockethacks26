@@ -1,7 +1,7 @@
 import asyncio
 from fastapi import APIRouter, HTTPException
-from models.schema import CaseCreate, SimulationCreate
-from models.writer import insert_case, insert_persona, insert_simulation
+from models.schema import CaseCreate, SimulationCreate, PersonaCreate, PersonaUpdate
+from models.writer import insert_case, insert_persona, update_persona, insert_simulation
 from models.reader import read_cases, read_personas, read_simulations
 from services.mediator import run_simulation
 
@@ -17,6 +17,25 @@ DEFAULT_PERSONAS = [
     {"name": "Labor Economist", "description": "Academic researcher studying wage policy effects.", "priorities": ["data-driven outcomes", "employment levels"], "risk_tolerance": "high", "values": ["evidence", "equity"]},
     {"name": "Chamber of Commerce Rep", "description": "Lobbies on behalf of regional businesses.", "priorities": ["business competitiveness", "low regulation"], "risk_tolerance": "low", "values": ["growth", "free markets"]},
 ]
+
+
+@router.post("/personas")
+async def post_persona(body: PersonaCreate):
+    existing = await read_personas(name=body.name)
+    if existing:
+        return {"persona_id": existing[0]["_id"]}
+    result = await insert_persona(
+        body.name, body.description, body.priorities,
+        body.risk_tolerance, body.values, body.custom_prompt,
+    )
+    return {"persona_id": str(result)}
+
+
+@router.put("/personas/{persona_id}")
+async def put_persona(persona_id: str, body: PersonaUpdate):
+    fields = body.model_dump(exclude_none=True)
+    await update_persona(persona_id, **fields)
+    return {"message": "Updated"}
 
 
 @router.post("/cases")

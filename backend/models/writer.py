@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from bson import ObjectId
 from models.database import db_manager
 
 # Save case to MongoDB
@@ -66,13 +67,23 @@ async def insert_round(
     return result.inserted_id
 
 # Insert a Persona into MongoDB
-async def insert_persona(name, description, priorities, risk_tolerance, values):
+async def update_persona(persona_id, **fields):
+    update = {k: v for k, v in fields.items() if v is not None}
+    if update:
+        await db_manager.personas.update_one(
+            {"_id": ObjectId(persona_id)},
+            {"$set": update}
+        )
+
+
+async def insert_persona(name, description, priorities, risk_tolerance, values, custom_prompt=""):
     document = {
         "name": name,
         "description": description,
         "priorities": priorities,
         "risk_tolerance": risk_tolerance,
-        "values": values
+        "values": values,
+        "custom_prompt": custom_prompt,
     }
 
     result = await db_manager.personas.insert_one(document)

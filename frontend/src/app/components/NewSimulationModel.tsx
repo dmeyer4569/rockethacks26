@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSimulation } from "../../context/SimulationContext";
-import { fetchPersonas } from "../../lib/api";
+import { fetchPersonas, createPersona, updatePersona } from "../../lib/api";
 import {
     X,
     Zap,
@@ -177,22 +177,23 @@ const POLICY_DOMAINS = [
      });
    };
  
-   const handleCreateAgent = () => {
-     if (!newAgentName.trim()) return;
-     const id = `agent_${Date.now()}`;
-     const newAgent: Agent = { id, name: newAgentName.trim(), color: newAgentColor, isCustom: true };
-     setCustomAgents((prev) => [...prev, newAgent]);
-     // Auto-select and give default personality
-     setSelectedAgents((prev) => [...prev, id]);
-     setAgentPersonalities((prev) => ({
-       ...prev,
-       [id]: { trait: "pragmatic", stubbornness: 50, prompt: "" },
-     }));
-     setSelectedPreset("custom");
-     setNewAgentName("");
-     setNewAgentColor(COLOR_PALETTE[4]);
-     setShowNewAgent(false);
-   };
+   const handleCreateAgent = async () => {
+    if (!newAgentName.trim()) return;
+    const name = newAgentName.trim();
+    const color = newAgentColor;
+    setNewAgentName("");
+    setNewAgentColor(COLOR_PALETTE[4]);
+    setShowNewAgent(false);
+    const id = await createPersona(name, `${name} participating in policy deliberation.`);
+    const newAgent: Agent = { id, name, color, isCustom: true };
+    setCustomAgents((prev) => [...prev, newAgent]);
+    setSelectedAgents((prev) => [...prev, id]);
+    setAgentPersonalities((prev) => ({
+      ...prev,
+      [id]: { trait: "pragmatic", stubbornness: 50, prompt: "" },
+    }));
+    setSelectedPreset("custom");
+  };
  
    const handleDeleteAgent = (agentId: string) => {
      setCustomAgents((prev) => prev.filter((a) => a.id !== agentId));
@@ -212,6 +213,24 @@ const POLICY_DOMAINS = [
        : true;
  
   const { startSimulation } = useSimulation();
+  const [savedAgents, setSavedAgents] = useState<Set<string>>(new Set());
+
+  const handleSavePersona = async (agentId: string) => {
+    const p = agentPersonalities[agentId];
+    if (!p) return;
+    const traitDef = allTraits.find((t) => t.id === p.trait);
+    const traitLabel = traitDef?.label ?? p.trait;
+    const traitDesc = traitDef?.desc ?? "";
+    const riskTolerance = p.stubbornness >= 70 ? "low" : p.stubbornness >= 40 ? "medium" : "high";
+    await updatePersona(agentId, {
+      priorities: [traitDesc || traitLabel],
+      risk_tolerance: riskTolerance,
+      values: [traitLabel],
+      custom_prompt: p.prompt,
+    });
+    setSavedAgents((prev) => new Set(prev).add(agentId));
+    setTimeout(() => setSavedAgents((prev) => { const s = new Set(prev); s.delete(agentId); return s; }), 2000);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1003,6 +1022,19 @@ const POLICY_DOMAINS = [
                                            </p>
                                          </div>
                                        )}
+                                     </div>
+                                     <div className="flex justify-end pt-1">
+                                       <button
+                                         onClick={() => handleSavePersona(agent.id)}
+                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors font-['Inter',sans-serif]"
+                                         style={{ fontSize: "11px", fontWeight: 500 }}
+                                       >
+                                         {savedAgents.has(agent.id) ? (
+                                           <><Check className="w-3 h-3" /> Saved</>
+                                         ) : (
+                                           <><Check className="w-3 h-3" /> Save to library</>
+                                         )}
+                                       </button>
                                      </div>
                                    </div>
                                  )}

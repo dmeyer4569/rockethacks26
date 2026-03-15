@@ -51,6 +51,31 @@ export async function createSimulation(body: SimulationCreateRequest): Promise<s
   return data.simulation_id;
 }
 
+export async function createPersona(name: string, description = ""): Promise<string> {
+  const res = await fetch(`${BASE}/write/personas`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, description }),
+  });
+  const data = await json<{ persona_id: string }>(res);
+  return data.persona_id;
+}
+
+export async function updatePersona(personaId: string, fields: {
+  name?: string;
+  description?: string;
+  priorities?: string[];
+  risk_tolerance?: string;
+  values?: string[];
+  custom_prompt?: string;
+}): Promise<void> {
+  await fetch(`${BASE}/write/personas/${encodeURIComponent(personaId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(fields),
+  });
+}
+
 export async function rerunSimulation(simId: string): Promise<string> {
   const res = await fetch(`${BASE}/write/simulations/${encodeURIComponent(simId)}/rerun`, {
     method: "POST",
