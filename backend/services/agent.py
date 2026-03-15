@@ -3,8 +3,18 @@ import json
 from google import genai
 from google.genai import types
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+_client = None
 MODEL = "gemini-2.0-flash"
+
+
+def _get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY not set. Set it in .env to run simulations.")
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 
 def build_system_prompt(persona: dict) -> str:
@@ -68,6 +78,7 @@ async def apply_change(base_policy: str, change_text: str, supporting_data: dict
 
 
 async def _call_gemini(system_prompt: str, user_prompt: str) -> str:
+    client = _get_client()
     response = await client.aio.models.generate_content(
         model=MODEL,
         contents=user_prompt,
