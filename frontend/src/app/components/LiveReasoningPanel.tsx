@@ -4,8 +4,6 @@ import {
   Brain,
   ChevronDown,
   ChevronUp,
-  Pause,
-  Play,
   Filter,
   Maximize2,
   Minimize2,

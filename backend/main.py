@@ -40,7 +40,7 @@ async def main():
         existing = await read_personas()
         if len(existing) < 5:
             for p in TEST_PERSONAS:
-                await insert_persona(p["name"], p["description"], p["priorities"], p["risk_tolerance"], p["values"])
+                await insert_persona(p["name"], p["description"], p["priorities"], p["risk_tolerance"], p["values"], "")
             print("Inserted test personas")
         else:
             print(f"Found {len(existing)} personas, skipping insert")

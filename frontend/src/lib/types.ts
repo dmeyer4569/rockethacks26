@@ -14,6 +14,7 @@ export interface SimulationConfig {
   convergence_threshold: number;
   "variance-threshold": number;
   max_rounds: number;
+  convergence_mode?: "fixed" | "adaptive" | "exploratory";
 }
 
 export interface Simulation {
