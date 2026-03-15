@@ -833,11 +833,11 @@ const POLICY_DOMAINS = [
  
                          {/* Per-Agent Personality Rows */}
                          <div className="space-y-1.5">
-                           {allAgents.filter((a) => selectedAgents.includes(a.id)).map((agent) => {
-                             const personality = agentPersonalities[agent.id];
-                             const traitData = allTraits.find((t) => t.id === personality.trait);
-                             const isExpanded = expandedAgent === agent.id;
-                             const hasPrompt = personality.prompt.trim().length > 0;
+                          {allAgents.filter((a) => selectedAgents.includes(a.id)).map((agent) => {
+                            const personality = agentPersonalities[agent.id] ?? { trait: "pragmatic", stubbornness: 50, prompt: "" };
+                            const traitData = allTraits.find((t) => t.id === personality.trait);
+                            const isExpanded = expandedAgent === agent.id;
+                            const hasPrompt = personality.prompt.trim().length > 0;
  
                              return (
                                <div key={agent.id} className="rounded-xl border border-white/[0.06] overflow-hidden">
