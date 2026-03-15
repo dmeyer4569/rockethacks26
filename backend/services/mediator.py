@@ -12,6 +12,7 @@ NUM_AGENTS = 5
 PENALTY = 0.5
 CAS_THRESHOLD = 0.60
 VARIANCE_THRESHOLD = 0.15
+STAGNATE_DELTA = 0.001
 
 async def run_simulation(case_name: str) -> dict:
     cases = await read_cases(title=case_name)
@@ -144,8 +145,9 @@ async def run_simulation(case_name: str) -> dict:
     }
     
 
-def check_stagnation(cas_history: list, threshold = CAS_THRESHOLD, window: int = 3) -> bool:
-    if len(cas_history) < window:
+def check_stagnation(cas_history: list, delta = STAGNATE_DELTA, window: int = 3) -> bool:
+    if len(cas_history) < window + 1:
         return False
-    recent = cas_history[-window:]
-    return (max(recent) - min(recent)) < threshold
+    recent = cas_history[-(window + 1):]
+    diffs = [abs(recent[i+1] - recent[i]) for i in range(window)]
+    return all(d <= delta for d in diffs)
