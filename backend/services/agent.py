@@ -8,7 +8,7 @@ MODEL = "gemini-2.5-flash-lite"
 
 def build_system_prompt(persona: dict, domain: str = "Policy") -> str:
     prompt = (
-        f"You are a simulated stakeholder in a policy deliberation.\n\n"
+        f"You are a simulated stakeholder in a course-of-action deliberation.\n\n"
         f"POLICY DOMAIN: {domain}\n"
         f"IDENTITY: {persona['name']}\n"
         f"BACKGROUND: {persona['description']}\n"
@@ -45,10 +45,10 @@ def build_system_prompt(persona: dict, domain: str = "Policy") -> str:
 async def generate_proposal(persona: dict, current_policy: str, case: dict, domain: str = "Policy") -> str:
     system_prompt = build_system_prompt(persona, domain)
     user_prompt = (
-        f"Given the following policy, suggest 1-2 specific changes (max 3 sentences) "
-        f"that would make this policy more favorable for someone in your position. "
-        f"Be concrete — reference specific numbers, thresholds, or mechanisms where possible.\n\n"
-        f"POLICY:\n{current_policy}\n\n"
+        f"Given the following course-of-action, suggest 1-2 specific changes (max 3 sentences) "
+        f"that would make this course-of-action more favorable for someone in your position. "
+        f"Be concrete — reference specific numbers, thresholds, timelines, conditions, or mechanisms where possible and appropriate.\n\n"
+        f"COURSE-OF-ACTION:\n{current_policy}\n\n"
         f"SUPPORTING DATA:\n{case.get('supporting_data', {})}\n\n"
         f"Respond with ONLY this JSON:\n"
         f'{{"changes": "Your 1-2 sentence change", "reasoning": "Brief justification (max 2 sentences)"}}'
@@ -58,12 +58,12 @@ async def generate_proposal(persona: dict, current_policy: str, case: dict, doma
 async def rate_proposal(persona: dict, current_policy: str, proposal: dict, domain: str = "Policy") -> str:
     system_prompt = build_system_prompt(persona, domain)
     user_prompt = (
-        f"Rate the following proposed policy change on a scale from -1.00 to 1.00 "
+        f"Rate the following proposed course-of-action change on a scale from -1.00 to 1.00 "
         f"(in 0.01 increments), where:\n"
         f"  -1.00 = catastrophically harmful to your interests\n"
         f"   0.00 = neutral / no impact\n"
         f"   1.00 = maximally beneficial to your interests\n\n"
-        f"CURRENT POLICY:\n{current_policy}\n\n"
+        f"CURRENT COURSE OF ACTION:\n{current_policy}\n\n"
         f"PROPOSED CHANGE:\n{proposal['changes']}\n\n"
         f"Respond with ONLY this JSON:\n"
         f'{{"score": <number between -1.00 and 1.00>, "justification": "1-2 sentence(s) explaining your rating"}}'
@@ -72,16 +72,16 @@ async def rate_proposal(persona: dict, current_policy: str, proposal: dict, doma
 
 async def apply_change(base_policy: str, change_text: str, supporting_data: dict, domain: str = "Policy") -> tuple[str, dict]:
     prompt = (
-        f"A policy change is being applied. Given the base policy, the change, and the current supporting data, "
-        f"return the updated policy text AND how the supporting data would realistically change as a result.\n\n"
-        f"BASE POLICY:\n{base_policy}\n\n"
+        f"A course-of-action change is being applied. Given the base course-of-action, the change, and the current supporting data, "
+        f"return the updated course-of-action text AND how the supporting data would realistically change as a result.\n\n"
+        f"BASE COURSE-OF-ACTION:\n{base_policy}\n\n"
         f"CHANGE TO APPLY:\n{change_text}\n\n"
         f"CURRENT SUPPORTING DATA:\n{json.dumps(supporting_data)}\n\n"
         f"Respond with ONLY this JSON:\n"
         f'{{"updated_policy": "...", "updated_supporting_data": {{...}}}}'
     )
     result = await _call_gemini(
-        f"You are a policy editor and domain expert in {domain}. Apply the change precisely and update the supporting data to reflect realistic downstream effects in the {domain} domain.",
+        f"You are a course-of-action editor and domain expert in {domain}. Apply the change precisely and update the supporting data to reflect realistic downstream effects in the {domain} domain.",
         prompt,
     )
     parsed = json.loads(result)
